@@ -1,0 +1,114 @@
+name: GitHub Repository Text Combiner
+
+on:
+  push:
+    paths:
+      - 'GitHub_Combine_Task.txt'
+
+jobs:
+  combine-repos:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - name: Checkout workflow repo
+        uses: actions/checkout@v4
+
+      - name: Read and process tasks
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN || github.token }}
+        run: |
+          TASK_FILE="GitHub_Combine_Task.txt"
+          
+          if [ ! -s "$TASK_FILE" ]; then
+            echo "Task file is empty, exiting"
+            exit 0
+          fi
+          
+          # 定义文本文件扩展名
+          TEXT_EXTS="\.(py|js|md|txt|json|yaml|yml|xml|html|css|scss|less|sh|bash|rb|go|java|c|cpp|h|rs|ts|jsx|tsx|vue|sql|ini|cfg|conf|env|gitignore|dockerignore)$"
+          
+          while IFS= read -r repo_url || [ -n "$repo_url" ]; do
+            [ -z "$repo_url" ] && continue
+            
+            echo "Processing: $repo_url"
+            
+            # 提取仓库名
+            repo_name=$(echo "$repo_url" | sed -E 's|https://github.com/||' | sed 's|/$||' | tr '/' '_')
+            clone_url="${repo_url}.git"
+            
+            # Clone 仓库（使用 token 认证）
+            git clone --depth 1 "https://${GITHUB_TOKEN}@${clone_url#https://}" "/tmp/$repo_name" 2>/dev/null || {
+              echo "Failed to clone $repo_url"
+              continue
+            }
+            
+            cd "/tmp/$repo_name"
+            
+            # 查找所有文本文件
+            part=1
+            current_size=0
+            max_size=48000  # KB, ~48MB
+            output_base="${{ github.workspace }}/${repo_name}"
+            
+            find . -type f | while read -r file; do
+              # 跳过 .git 目录
+              [[ "$file" == "./.git"* ]] && continue
+              
+              # 检查是否为文本文件
+              if ! file --mime-type "$file" | grep -q "text/"; then
+                continue
+              fi
+              
+              # 获取文件大小 (KB)
+              file_size=$(stat -c%s "$file")
+              file_size_kb=$((file_size / 1024))
+              
+              # 检查是否需要新建文件
+              if [ $((current_size + file_size_kb)) -gt $max_size ] && [ $current_size -gt 0 ]; then
+                part=$((part + 1))
+                current_size=0
+              fi
+              
+              output_file="${output_base}_part${part}.txt"
+              
+              # 写入文件头
+              if [ ! -f "$output_file" ]; then
+                echo "=== Repository: $repo_name ===" > "$output_file"
+                echo "" >> "$output_file"
+              fi
+              
+              # 写入文件内容
+              rel_path="${file#./}"
+              echo "--- File: $rel_path ---" >> "$output_file"
+              cat "$file" >> "$output_file"
+              echo "" >> "$output_file"
+              echo "" >> "$output_file"
+              
+              current_size=$((current_size + file_size_kb))
+            done
+            
+            # 清理
+            cd "${{ github.workspace }}"
+            rm -rf "/tmp/$repo_name"
+            
+          done < "$TASK_FILE"
+          
+          # 清空任务文件
+          > "$TASK_FILE"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: combined-text-files
+          path: '*_part*.txt'
+          if-no-files-found: warn
+
+      - name: Commit cleared task file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add GitHub_Combine_Task.txt
+          git diff --staged --quiet || git commit -m "Clear combined task file after processing"
+          git push
