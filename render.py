@@ -16,6 +16,12 @@ if hasattr(bpy.ops.wm, "usd_import"):
 else:
     raise Exception("USD Importer not available in this Blender build")
 
+print("FILE EXISTS:", os.path.exists(input_file))
+print("FILE SIZE:", os.path.getsize(input_file))
+
+res = bpy.ops.wm.usd_import(filepath=input_file)
+print("IMPORT RESULT:", res)
+
 bpy.ops.object.light_add(type='AREA', location=(3, -3, 3))
 bpy.ops.object.camera_add(location=(0, -3, 1.5))
 bpy.context.scene.camera = bpy.context.object
