@@ -1,4 +1,4 @@
-name:  3D Models to USDZ
+name: Convert 3D Models to USDZ
 
 on:
   push:
