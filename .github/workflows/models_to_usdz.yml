@@ -22,6 +22,43 @@ jobs:
       - name: Install gltf-pipeline
         run: npm install -g gltf-pipeline
 
+      - name: Install usdzconvert
+        run: |
+          # 下载 Apple USDPython 工具包
+          # 注意：这个链接可能会过期，需要定期检查更新
+          USD_PYTHON_URL="https://dpvfy467eg5j2.cloudfront.net/usdpython/USDPython_0.72.zip"
+          
+          echo "Downloading USDPython..."
+          curl -L -o /tmp/USDPython.zip "$USD_PYTHON_URL"
+          
+          echo "Extracting USDPython..."
+          unzip -q /tmp/USDPython.zip -d /tmp/USDPython
+          
+          # 查找 usdzconvert 可执行文件
+          USDZCONVERT=$(find /tmp/USDPython -name "usdzconvert" -type f | head -n 1)
+          
+          if [ -z "$USDZCONVERT" ]; then
+            echo "ERROR: usdzconvert binary not found in extracted files"
+            exit 1
+          fi
+          
+          echo "Found usdzconvert: $USDZCONVERT"
+          
+          # 添加到 PATH
+          USDZ_BIN_DIR=$(dirname "$USDZCONVERT")
+          echo "$USDZ_BIN_DIR" >> $GITHUB_PATH
+          
+          # 设置 PYTHONPATH（usdzconvert 需要的 Python 模块）
+          USD_LIB=$(find /tmp/USDPython -type d -name "lib" -path "*/USD/lib/python" | head -n 1)
+          if [ -n "$USD_LIB" ]; then
+            echo "PYTHONPATH=$USD_LIB" >> $GITHUB_ENV
+          fi
+          
+          # 安装 Python 依赖（如果需要）
+          pip3 install --user numpy 2>/dev/null || true
+          
+          echo "usdzconvert installed successfully"
+
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v44
