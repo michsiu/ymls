@@ -1,4 +1,4 @@
-name: USDZ Render
+name: USDZ Auto Render
 
 on:
   workflow_dispatch:
@@ -11,21 +11,11 @@ jobs:
       # =========================
       # 1. 拉代码
       # =========================
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
 
       # =========================
-      # 2. 环境检查（防止文件不存在）
-      # =========================
-      - name: Debug workspace
-        run: |
-          echo "PWD:"
-          pwd
-          echo "FILES:"
-          ls -al
-
-      # =========================
-      # 3. 安装依赖
+      # 2. 环境
       # =========================
       - name: Install deps
         run: |
@@ -33,7 +23,7 @@ jobs:
           sudo apt install -y xvfb wget tar xz-utils
 
       # =========================
-      # 4. 下载 Blender（官方稳定版）
+      # 3. Blender
       # =========================
       - name: Download Blender
         run: |
@@ -41,35 +31,146 @@ jobs:
           tar -xf blender-4.0.2-linux-x64.tar.xz
 
       # =========================
-      # 5. 执行渲染
+      # 4. Render (核心：同名输出)
       # =========================
-      - name: Run render
+      - name: Run USDZ Render
         run: |
-          xvfb-run -a ./blender-4.0.2-linux-x64/blender -b \
-            --factory-startup \
-            --python render.py \
-            -- model.usdz output.png
+          set -e
+
+          MODEL="model.usdz"
+          BASENAME=$(basename "$MODEL" .usdz)
+          OUTPUT="${BASENAME}.png"
+
+          echo "INPUT: $MODEL"
+          echo "OUTPUT: $OUTPUT"
+
+          cat << 'EOF' > render.py
+import bpy
+import os
+from mathutils import Vector
+
+# =========================
+# 输入/输出（由 shell 注入）
+# =========================
+input_file = "model.usdz"
+output_file = os.path.abspath("model.png")
+
+# =========================
+# 初始化
+# =========================
+bpy.ops.wm.read_factory_settings(use_empty=True)
+
+# =========================
+# USDZ 导入
+# =========================
+bpy.ops.wm.usd_import(filepath=input_file)
+
+meshes = [o for o in bpy.data.objects if o.type == 'MESH']
+if not meshes:
+    raise RuntimeError("❌ no mesh found")
+
+# =========================
+# bounding box 计算（居中）
+# =========================
+min_v = Vector((1e10,1e10,1e10))
+max_v = Vector((-1e10,-1e10,-1e10))
+
+for obj in meshes:
+    for v in obj.bound_box:
+        w = obj.matrix_world @ Vector(v)
+        min_v = Vector((
+            min(min_v.x,w.x),
+            min(min_v.y,w.y),
+            min(min_v.z,w.z)
+        ))
+        max_v = Vector((
+            max(max_v.x,w.x),
+            max(max_v.y,w.y),
+            max(max_v.z,w.z)
+        ))
+
+center = (min_v + max_v) / 2
+size = (max_v - min_v).length
+
+for obj in meshes:
+    obj.location -= center
+
+# =========================
+# 相机（45°商品视角）
+# =========================
+cam_dist = size * 2.2
+
+bpy.ops.object.camera_add(location=(cam_dist, -cam_dist, cam_dist * 0.6))
+cam = bpy.context.object
+bpy.context.scene.camera = cam
+
+direction = Vector((0,0,0)) - cam.location
+cam.rotation_euler = direction.to_track_quat('-Z','Y').to_euler()
+
+cam.data.lens = 50
+cam.data.clip_start = 0.01
+cam.data.clip_end = 10000
+
+# =========================
+# 光照（商品级）
+# =========================
+bpy.ops.object.light_add(type='SUN', location=(5,-5,5))
+light = bpy.context.object
+light.data.energy = 4
+
+# =========================
+# world 白底
+# =========================
+world = bpy.context.scene.world or bpy.data.worlds.new("World")
+bpy.context.scene.world = world
+world.use_nodes = True
+
+bg = world.node_tree.nodes["Background"]
+bg.inputs[0].default_value = (1,1,1,1)
+bg.inputs[1].default_value = 1.2
+
+# =========================
+# 渲染设置（CPU稳定）
+# =========================
+scene = bpy.context.scene
+scene.render.engine = 'CYCLES'
+scene.cycles.device = 'CPU'
+scene.cycles.samples = 32
+
+scene.render.resolution_x = 1024
+scene.render.resolution_y = 1024
+scene.render.resolution_percentage = 100
+
+scene.render.image_settings.file_format = 'PNG'
+scene.render.filepath = output_file
+
+# =========================
+# 渲染 + 强制保存
+# =========================
+bpy.ops.render.render(write_still=True)
+
+img = bpy.data.images.get("Render Result")
+if img:
+    img.save_render(filepath=output_file)
+
+print("DONE:", output_file)
+EOF
+
+          xvfb-run -a ./blender-4.0.2-linux-x64/blender -b --python render.py
 
       # =========================
-      # 6. 强制验证输出（关键）
+      # 5. 校验输出（关键）
       # =========================
       - name: Verify output
         run: |
-          echo "Checking output..."
           ls -al
-
-          if [ ! -f output.png ]; then
-            echo "❌ output.png not found"
-            exit 1
-          fi
-
-          echo "✅ output exists"
+          test -f model.png || (echo "❌ output missing" && exit 1)
 
       # =========================
-      # 7. 上传结果
+      # 6. 上传结果
       # =========================
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: preview
-          path: output.png
+          path: model.png
