@@ -1,4 +1,4 @@
-name: usd-preview
+name: USDZ Render
 
 on:
   workflow_dispatch:
@@ -8,24 +8,67 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      # =========================
+      # 1. 拉代码
+      # =========================
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: sudo apt update && sudo apt install -y xvfb wget tar xz-utils
+      # =========================
+      # 2. 环境检查（防止文件不存在）
+      # =========================
+      - name: Debug workspace
+        run: |
+          echo "PWD:"
+          pwd
+          echo "FILES:"
+          ls -al
 
-      - name: Download Blender official build
+      # =========================
+      # 3. 安装依赖
+      # =========================
+      - name: Install deps
+        run: |
+          sudo apt update
+          sudo apt install -y xvfb wget tar xz-utils
+
+      # =========================
+      # 4. 下载 Blender（官方稳定版）
+      # =========================
+      - name: Download Blender
         run: |
           wget https://download.blender.org/release/Blender4.0/blender-4.0.2-linux-x64.tar.xz
           tar -xf blender-4.0.2-linux-x64.tar.xz
 
-      - name: Render USDZ
+      # =========================
+      # 5. 执行渲染
+      # =========================
+      - name: Run render
         run: |
-          xvfb-run -a ./blender-4.0.2-linux-x64/blender -b -noaudio \
+          xvfb-run -a ./blender-4.0.2-linux-x64/blender -b \
             --factory-startup \
             --python render.py \
-            -- models/model.usdz output.png
+            -- model.usdz output.png
 
-      - name: Upload result
+      # =========================
+      # 6. 强制验证输出（关键）
+      # =========================
+      - name: Verify output
+        run: |
+          echo "Checking output..."
+          ls -al
+
+          if [ ! -f output.png ]; then
+            echo "❌ output.png not found"
+            exit 1
+          fi
+
+          echo "✅ output exists"
+
+      # =========================
+      # 7. 上传结果
+      # =========================
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: preview
