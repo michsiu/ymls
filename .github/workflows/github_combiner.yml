@@ -20,80 +20,281 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN || github.token }}
         run: |
           TASK_FILE="GitHub_Combine_Task.txt"
+          LOG_FILE="log.txt"
           
-          if [ ! -s "$TASK_FILE" ]; then
-            echo "Task file is empty, exiting"
-            exit 0
-          fi
+          # 初始化日志文件
+          echo "============================================" > "$LOG_FILE"
+          echo "GitHub Repository Text Combiner - Execution Log" >> "$LOG_FILE"
+          echo "Start Time: $(date)" >> "$LOG_FILE"
+          echo "============================================" >> "$LOG_FILE"
+          echo "" >> "$LOG_FILE"
           
-          # 定义文本文件扩展名
-          TEXT_EXTS="\.(py|js|md|txt|json|yaml|yml|xml|html|css|scss|less|sh|bash|rb|go|java|c|cpp|h|rs|ts|jsx|tsx|vue|sql|ini|cfg|conf|env|gitignore|dockerignore)$"
+          # 初始化统计变量
+          total_tasks=0
+          success_count=0
+          fail_count=0
+          total_output_size=0
+          generated_files_list=""
+          failed_tasks_list=""
+          warnings_list=""
+          performance_stats=""
+          skipped_files_detail=""
           
-          while IFS= read -r repo_url || [ -n "$repo_url" ]; do
-            [ -z "$repo_url" ] && continue
+          # 记录开始时间（秒）
+          workflow_start=$(date +%s)
+          
+          # 函数：将各种 URL 转换为 Git clone URL
+          convert_to_git_url() {
+            local input="$1"
             
-            echo "Processing: $repo_url"
+            # 1. 已经是 Git clone URL（带 .git）
+            if echo "$input" | grep -qE '^https://github\.com/[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+\.git$'; then
+              echo "$input"
+              return 0
+            fi
+            
+            # 2. 仓库主页 URL（不带 .git）
+            if echo "$input" | grep -qE '^https://github\.com/[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+/?$'; then
+              echo "${input%/}.git"
+              return 0
+            fi
+            
+            # 3. owner/repo 格式
+            if echo "$input" | grep -qE '^[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+$'; then
+              echo "https://github.com/${input}.git"
+              return 0
+            fi
+            
+            # 4. 文件/目录 URL（blob/tree）
+            if echo "$input" | grep -qE '^https://github\.com/[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+/(blob|tree)/'; then
+              git_url=$(echo "$input" | sed -E 's|(https://github\.com/[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+)/.*|\1.git|')
+              echo "$git_url"
+              return 0
+            fi
+            
+            # 5. Raw 文件 URL
+            if echo "$input" | grep -qE '^https://raw\.githubusercontent\.com/[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+/'; then
+              git_url=$(echo "$input" | sed -E 's|https://raw\.githubusercontent\.com/([a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+)/.*|https://github.com/\1.git|')
+              echo "$git_url"
+              return 0
+            fi
+            
+            # 6. API URL
+            if echo "$input" | grep -qE '^https://api\.github\.com/repos/[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+'; then
+              git_url=$(echo "$input" | sed -E 's|https://api\.github\.com/repos/([a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+).*|https://github.com/\1.git|')
+              echo "$git_url"
+              return 0
+            fi
+            
+            # 无法识别
+            return 1
+          }
+          
+          while IFS= read -r line || [ -n "$line" ]; do
+            # 去除首尾空白
+            raw_url=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            [ -z "$raw_url" ] && continue
+            # 跳过注释行
+            [[ "$raw_url" =~ ^# ]] && continue
+            
+            total_tasks=$((total_tasks + 1))
+            task_start=$(date +%s)
+            
+            echo "Processing input: $raw_url"
+            
+            # 转换为 Git clone URL
+            git_url=$(convert_to_git_url "$raw_url")
+            if [ $? -ne 0 ]; then
+              echo "Skipping invalid URL: $raw_url"
+              failed_tasks_list="${failed_tasks_list}  - $raw_url (Invalid URL format)\n"
+              fail_count=$((fail_count + 1))
+              continue
+            fi
+            
+            echo "Resolved to git URL: $git_url"
             
             # 提取仓库名
-            repo_name=$(echo "$repo_url" | sed -E 's|https://github.com/||' | sed 's|/$||' | tr '/' '_')
-            clone_url="${repo_url}.git"
+            repo_name=$(echo "$git_url" | sed -E 's|https://github\.com/||' | sed 's/\.git$//' | sed 's|/|_|g')
             
-            # Clone 仓库（使用 token 认证）
-            git clone --depth 1 "https://${GITHUB_TOKEN}@${clone_url#https://}" "/tmp/$repo_name" 2>/dev/null || {
-              echo "Failed to clone $repo_url"
+            # 记录 clone 开始时间
+            clone_start=$(date +%s)
+            
+            # Clone 仓库
+            echo "Cloning $git_url ..."
+            clone_output=$(git clone --depth 1 "https://${GITHUB_TOKEN}@${git_url#https://}" "/tmp/$repo_name" 2>&1)
+            clone_exit_code=$?
+            
+            clone_end=$(date +%s)
+            clone_duration=$((clone_end - clone_start))
+            
+            if [ $clone_exit_code -ne 0 ]; then
+              echo "Failed to clone $git_url"
+              failed_tasks_list="${failed_tasks_list}  - $raw_url (Clone failed)\n"
+              fail_count=$((fail_count + 1))
+              warnings_list="${warnings_list}[ERROR] [$repo_name] Clone failed: $clone_output\n"
+              performance_stats="${performance_stats}[$repo_name] Clone: ${clone_duration}s | Status: FAILED\n"
               continue
-            }
+            fi
             
             cd "/tmp/$repo_name"
             
-            # 查找所有文本文件
-            part=1
-            current_size=0
-            max_size=48000  # KB, ~48MB
+            # 统计变量
+            text_files_count=0
+            total_size_kb=0
+            skipped_files=()
+            generated_parts=0
+            current_part=1
+            current_size_kb=0
+            max_size_kb=48000  # 48MB
             output_base="${{ github.workspace }}/${repo_name}"
             
-            find . -type f | while read -r file; do
+            # 扫描并处理文件
+            scan_start=$(date +%s)
+            
+            while IFS= read -r file; do
               # 跳过 .git 目录
               [[ "$file" == "./.git"* ]] && continue
               
               # 检查是否为文本文件
-              if ! file --mime-type "$file" | grep -q "text/"; then
+              mime_type=$(file --mime-type "$file" 2>/dev/null | awk '{print $2}')
+              if [[ ! "$mime_type" =~ ^text/ ]] && [[ "$mime_type" != "application/json" ]] && [[ "$mime_type" != "application/xml" ]]; then
+                skipped_files+=("${file#./} ($mime_type)")
                 continue
               fi
               
               # 获取文件大小 (KB)
-              file_size=$(stat -c%s "$file")
+              file_size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null)
               file_size_kb=$((file_size / 1024))
-              
-              # 检查是否需要新建文件
-              if [ $((current_size + file_size_kb)) -gt $max_size ] && [ $current_size -gt 0 ]; then
-                part=$((part + 1))
-                current_size=0
+              if [ $file_size_kb -eq 0 ] && [ $file_size -gt 0 ]; then
+                file_size_kb=1
               fi
               
-              output_file="${output_base}_part${part}.txt"
+              # 检查是否需要新建文件
+              if [ $((current_size_kb + file_size_kb)) -gt $max_size_kb ] && [ $current_size_kb -gt 0 ]; then
+                current_part=$((current_part + 1))
+                current_size_kb=0
+              fi
               
-              # 写入文件头
+              output_file="${output_base}_part${current_part}.txt"
+              
+              # 写入文件头（如果是新文件）
               if [ ! -f "$output_file" ]; then
                 echo "=== Repository: $repo_name ===" > "$output_file"
+                echo "=== Git URL: $git_url ===" >> "$output_file"
+                echo "=== Generated: $(date) ===" >> "$output_file"
                 echo "" >> "$output_file"
+                generated_parts=$((generated_parts + 1))
               fi
               
               # 写入文件内容
               rel_path="${file#./}"
               echo "--- File: $rel_path ---" >> "$output_file"
-              cat "$file" >> "$output_file"
+              echo "\`\`\`$rel_path" >> "$output_file"
+              cat "$file" 2>/dev/null >> "$output_file"
               echo "" >> "$output_file"
+              echo "\`\`\`" >> "$output_file"
               echo "" >> "$output_file"
               
-              current_size=$((current_size + file_size_kb))
+              text_files_count=$((text_files_count + 1))
+              total_size_kb=$((total_size_kb + file_size_kb))
+              current_size_kb=$((current_size_kb + file_size_kb))
+              
+            done < <(find . -type f ! -path './.git/*')
+            
+            scan_end=$(date +%s)
+            scan_duration=$((scan_end - scan_start))
+            
+            total_duration=$((scan_end - task_start))
+            
+            # 记录生成的文件
+            for part in $(seq 1 $generated_parts); do
+              part_file="${repo_name}_part${part}.txt"
+              if [ -f "${{ github.workspace }}/${part_file}" ]; then
+                file_size_bytes=$(stat -c%s "${{ github.workspace }}/${part_file}" 2>/dev/null || stat -f%z "${{ github.workspace }}/${part_file}" 2>/dev/null)
+                file_size_mb=$(echo "scale=2; $file_size_bytes / 1048576" | bc)
+                total_output_size=$(echo "$total_output_size + $file_size_bytes" | bc)
+                generated_files_list="${generated_files_list}${part_file} (${file_size_mb}MB), "
+              fi
             done
             
-            # 清理
+            # 记录跳过的文件详情
+            if [ ${#skipped_files[@]} -gt 0 ]; then
+              skip_count=${#skipped_files[@]}
+              warnings_list="${warnings_list}[WARNING] [$repo_name] Skipped ${skip_count} non-text files\n"
+              skipped_files_detail="${skipped_files_detail}--- Repository: $repo_name (${skip_count} skipped files) ---\n"
+              # 只显示前10个
+              for i in "${!skipped_files[@]}"; do
+                if [ $i -lt 10 ]; then
+                  skipped_files_detail="${skipped_files_detail}  - ${skipped_files[$i]}\n"
+                elif [ $i -eq 10 ]; then
+                  skipped_files_detail="${skipped_files_detail}  - ... $((${#skipped_files[@]} - 10)) more\n"
+                  break
+                fi
+              done
+              skipped_files_detail="${skipped_files_detail}\n"
+            fi
+            
+            # 记录性能统计
+            performance_stats="${performance_stats}[$repo_name] Clone: ${clone_duration}s | Scan: ${scan_duration}s | Total: ${total_duration}s | Files: ${text_files_count} | Parts: ${generated_parts}\n"
+            
+            success_count=$((success_count + 1))
+            
+            # 清理临时目录
             cd "${{ github.workspace }}"
             rm -rf "/tmp/$repo_name"
             
+            echo "Finished processing $repo_name"
+            echo "---"
+            
           done < "$TASK_FILE"
+          
+          workflow_end=$(date +%s)
+          total_duration=$((workflow_end - workflow_start))
+          
+          # 格式化总输出大小
+          total_output_size_mb=$(echo "scale=2; $total_output_size / 1048576" | bc)
+          
+          # 清理 generated_files_list 末尾的逗号和空格
+          generated_files_list=$(echo "$generated_files_list" | sed 's/, $//')
+          
+          # ========== 写入 EXECUTION SUMMARY ==========
+          echo "========== 1. EXECUTION SUMMARY ==========" >> "$LOG_FILE"
+          echo "Total tasks: $total_tasks" >> "$LOG_FILE"
+          echo "Successful: $success_count" >> "$LOG_FILE"
+          echo "Failed: $fail_count" >> "$LOG_FILE"
+          echo "Generated files: ${generated_files_list:-None}" >> "$LOG_FILE"
+          echo "Total output size: ${total_output_size_mb} MB" >> "$LOG_FILE"
+          echo "" >> "$LOG_FILE"
+          
+          if [ -n "$failed_tasks_list" ]; then
+            echo "Failed tasks:" >> "$LOG_FILE"
+            echo -e "$failed_tasks_list" >> "$LOG_FILE"
+            echo "" >> "$LOG_FILE"
+          fi
+          
+          # ========== 写入 ERRORS & WARNINGS ==========
+          echo "========== 2. ERRORS & WARNINGS ==========" >> "$LOG_FILE"
+          if [ -n "$warnings_list" ]; then
+            echo -e "$warnings_list" >> "$LOG_FILE"
+          else
+            echo "No errors or warnings" >> "$LOG_FILE"
+          fi
+          echo "" >> "$LOG_FILE"
+          
+          # ========== 写入 PERFORMANCE STATS ==========
+          echo "========== 3. PERFORMANCE STATS ==========" >> "$LOG_FILE"
+          echo -e "$performance_stats" >> "$LOG_FILE"
+          echo "Total workflow execution time: ${total_duration}s" >> "$LOG_FILE"
+          echo "End Time: $(date)" >> "$LOG_FILE"
+          echo "" >> "$LOG_FILE"
+          
+          # ========== 写入 SKIPPED FILES DETAIL ==========
+          if [ -n "$skipped_files_detail" ]; then
+            echo "========== 4. SKIPPED FILES DETAIL ==========" >> "$LOG_FILE"
+            echo -e "$skipped_files_detail" >> "$LOG_FILE"
+          fi
+          
+          echo "============================================" >> "$LOG_FILE"
           
           # 清空任务文件
           > "$TASK_FILE"
@@ -101,14 +302,16 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: combined-text-files
-          path: '*_part*.txt'
+          name: combined-output
+          path: |
+            *_part*.txt
+            log.txt
           if-no-files-found: warn
 
       - name: Commit cleared task file
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add GitHub_Combine_Task.txt
+          git add GitHub_Combine_Task.txt log.txt 2>/dev/null || true
           git diff --staged --quiet || git commit -m "Clear combined task file after processing"
           git push
