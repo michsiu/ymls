@@ -8,17 +8,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install Blender
-        run: |
-          sudo apt update
-          sudo apt install -y blender xvfb
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y xvfb wget tar xz-utils
 
-      - name: Run render (headless safe)
+      - name: Download Blender official build
         run: |
-          xvfb-run -a blender -b -noaudio \
+          wget https://download.blender.org/release/Blender4.0/blender-4.0.2-linux-x64.tar.xz
+          tar -xf blender-4.0.2-linux-x64.tar.xz
+
+      - name: Render USDZ
+        run: |
+          xvfb-run -a ./blender-4.0.2-linux-x64/blender -b -noaudio \
             --factory-startup \
             --python render.py \
             -- models/model.usdz output.png
