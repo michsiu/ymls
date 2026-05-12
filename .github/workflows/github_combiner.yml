@@ -19,6 +19,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN || github.token }}
         run: |
+          set +e  # 禁止错误时退出，确保所有任务都被处理
+          set -o pipefail
+          
           TASK_FILE="GitHub_Combine_Task.txt"
           LOG_FILE="log.txt"
           
@@ -90,6 +93,13 @@ jobs:
             return 1
           }
           
+          # 检查任务文件是否存在且非空
+          if [ ! -s "$TASK_FILE" ]; then
+            echo "Task file is empty or does not exist, exiting"
+            echo "No tasks found" >> "$LOG_FILE"
+            exit 0
+          fi
+          
           while IFS= read -r line || [ -n "$line" ]; do
             # 去除首尾空白
             raw_url=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
@@ -108,6 +118,7 @@ jobs:
               echo "Skipping invalid URL: $raw_url"
               failed_tasks_list="${failed_tasks_list}  - $raw_url (Invalid URL format)\n"
               fail_count=$((fail_count + 1))
+              warnings_list="${warnings_list}[ERROR] Invalid URL format: $raw_url\n"
               continue
             fi
             
@@ -116,19 +127,45 @@ jobs:
             # 提取仓库名
             repo_name=$(echo "$git_url" | sed -E 's|https://github\.com/||' | sed 's/\.git$//' | sed 's|/|_|g')
             
+            # 检查仓库是否存在（先发 HEAD 请求）
+            repo_check_url=$(echo "$git_url" | sed 's/\.git$//' | sed 's|https://github.com/|https://api.github.com/repos/|')
+            echo "Checking if repository exists..."
+            http_code=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${GITHUB_TOKEN}" "$repo_check_url")
+            
+            if [ "$http_code" != "200" ]; then
+              echo "Repository does not exist or is inaccessible (HTTP $http_code): $git_url"
+              failed_tasks_list="${failed_tasks_list}  - $raw_url (Repository not found or inaccessible, HTTP $http_code)\n"
+              fail_count=$((fail_count + 1))
+              warnings_list="${warnings_list}[ERROR] [$repo_name] Repository check failed: HTTP $http_code\n"
+              performance_stats="${performance_stats}[$repo_name] Status: FAILED (HTTP $http_code)\n"
+              continue
+            fi
+            
             # 记录 clone 开始时间
             clone_start=$(date +%s)
             
-            # Clone 仓库
-            echo "Cloning $git_url ..."
-            clone_output=$(git clone --depth 1 "https://${GITHUB_TOKEN}@${git_url#https://}" "/tmp/$repo_name" 2>&1)
-            clone_exit_code=$?
+            # Clone 仓库（2次重试）
+            clone_success=false
+            for attempt in 1 2; do
+              echo "Cloning $git_url (attempt $attempt)..."
+              clone_output=$(git clone --depth 1 "https://${GITHUB_TOKEN}@${git_url#https://}" "/tmp/$repo_name" 2>&1)
+              clone_exit_code=$?
+              
+              if [ $clone_exit_code -eq 0 ]; then
+                clone_success=true
+                break
+              else
+                echo "Clone attempt $attempt failed with exit code $clone_exit_code"
+                echo "Error: $clone_output"
+                sleep 2
+              fi
+            done
             
             clone_end=$(date +%s)
             clone_duration=$((clone_end - clone_start))
             
-            if [ $clone_exit_code -ne 0 ]; then
-              echo "Failed to clone $git_url"
+            if [ "$clone_success" = false ]; then
+              echo "Failed to clone $git_url after 2 attempts"
               failed_tasks_list="${failed_tasks_list}  - $raw_url (Clone failed)\n"
               fail_count=$((fail_count + 1))
               warnings_list="${warnings_list}[ERROR] [$repo_name] Clone failed: $clone_output\n"
@@ -136,7 +173,7 @@ jobs:
               continue
             fi
             
-            cd "/tmp/$repo_name"
+            cd "/tmp/$repo_name" || continue
             
             # 统计变量
             text_files_count=0
@@ -151,7 +188,8 @@ jobs:
             # 扫描并处理文件
             scan_start=$(date +%s)
             
-            while IFS= read -r file; do
+            # 使用 find 并处理文件名中的空格和特殊字符
+            find . -type f ! -path './.git/*' -print0 | while IFS= read -r -d '' file; do
               # 跳过 .git 目录
               [[ "$file" == "./.git"* ]] && continue
               
@@ -198,8 +236,7 @@ jobs:
               text_files_count=$((text_files_count + 1))
               total_size_kb=$((total_size_kb + file_size_kb))
               current_size_kb=$((current_size_kb + file_size_kb))
-              
-            done < <(find . -type f ! -path './.git/*')
+            done
             
             scan_end=$(date +%s)
             scan_duration=$((scan_end - scan_start))
@@ -240,7 +277,7 @@ jobs:
             success_count=$((success_count + 1))
             
             # 清理临时目录
-            cd "${{ github.workspace }}"
+            cd "${{ github.workspace }}" || exit
             rm -rf "/tmp/$repo_name"
             
             echo "Finished processing $repo_name"
