@@ -1,4 +1,4 @@
-name: USDZ Auto Render
+name: USDZ Preview Render
 
 on:
   workflow_dispatch:
