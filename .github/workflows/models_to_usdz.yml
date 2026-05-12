@@ -17,7 +17,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
 
       - name: Install gltf-pipeline
         run: npm install -g gltf-pipeline
@@ -32,11 +32,15 @@ jobs:
 
       - name: Convert to USDZ
         run: |
+          # 将文件列表保存到临时文件，避免空格导致循环分割
+          echo "${{ steps.changed-files.outputs.all_changed_files }}" > /tmp/changed_files.txt
+          
           # ============================================
           # 处理 ZIP 文件（包含 glTF 多文件）
           # ============================================
-          for ZIP_FILE in ${{ steps.changed-files.outputs.all_changed_files }}; do
-            # 只处理 .zip 文件
+          while IFS= read -r ZIP_FILE; do
+            [ -z "$ZIP_FILE" ] && continue
+            
             if [[ "$ZIP_FILE" != *.zip ]]; then
               continue
             fi
@@ -44,7 +48,7 @@ jobs:
             echo "Processing ZIP: $ZIP_FILE"
             
             BASENAME=$(basename "$ZIP_FILE" .zip)
-            WORK_DIR="tmp_$BASENAME"
+            WORK_DIR="tmp_${BASENAME}"
             
             mkdir -p "$WORK_DIR"
             unzip -o "$ZIP_FILE" -d "$WORK_DIR"
@@ -59,8 +63,8 @@ jobs:
             
             echo "Found glTF: $GLTF_FILE"
             
-            GLB_FILE="$BASENAME.glb"
-            USDZ_FILE="$BASENAME.usdz"
+            GLB_FILE="${BASENAME}.glb"
+            USDZ_FILE="${BASENAME}.usdz"
             
             # glTF → GLB
             echo "  Step 1/2: glTF → GLB..."
@@ -79,16 +83,15 @@ jobs:
             }
             
             echo "  Success: $USDZ_FILE"
-            
-            # 清理
             rm -rf "$WORK_DIR" "$ZIP_FILE" "$GLB_FILE"
-          done
+          done < /tmp/changed_files.txt
           
           # ============================================
           # 处理单个 .glb 文件
           # ============================================
-          for GLB_FILE in ${{ steps.changed-files.outputs.all_changed_files }}; do
-            # 只处理 .glb 文件
+          while IFS= read -r GLB_FILE; do
+            [ -z "$GLB_FILE" ] && continue
+            
             if [[ "$GLB_FILE" != *.glb ]]; then
               continue
             fi
@@ -96,9 +99,8 @@ jobs:
             echo "Processing GLB: $GLB_FILE"
             
             BASENAME=$(basename "$GLB_FILE" .glb)
-            USDZ_FILE="$BASENAME.usdz"
+            USDZ_FILE="${BASENAME}.usdz"
             
-            # GLB → USDZ
             echo "  GLB → USDZ..."
             usdzconvert "$GLB_FILE" "$USDZ_FILE" || {
               echo "  Failed to convert $GLB_FILE"
@@ -106,9 +108,8 @@ jobs:
             }
             
             echo "  Success: $USDZ_FILE"
-            
             rm -f "$GLB_FILE"
-          done
+          done < /tmp/changed_files.txt
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
