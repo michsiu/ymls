@@ -7,15 +7,16 @@ jobs:
   render:
     runs-on: ubuntu-latest
 
-    container:
-      image: ghcr.io/pixaranimationstudios/openusd:latest
-
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install OpenUSD
+        run: |
+          pip install usd-core
+
       - name: Generate Preview
         run: |
-          usdrecord model.usdz preview.png
+          python -m pxr.UsdAppUtils.usdrecord model.usdz preview.png
 
       - uses: actions/upload-artifact@v4
         with:
