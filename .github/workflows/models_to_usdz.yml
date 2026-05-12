@@ -1,4 +1,4 @@
-name: 3D Models to USDZ
+name: Convert 3D Models to USDZ
 
 on:
   push:
@@ -13,23 +13,34 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-      
+
       - name: Install gltf-pipeline
         run: npm install -g gltf-pipeline
-      
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            **.zip
+            **.glb
+
       - name: Convert to USDZ
         run: |
           # ============================================
           # 处理 ZIP 文件（包含 glTF 多文件）
           # ============================================
-          ZIP_FILES=$(git diff --name-only HEAD^ HEAD -- '*.zip')
-          
-          for ZIP_FILE in $ZIP_FILES; do
+          for ZIP_FILE in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            # 只处理 .zip 文件
+            if [[ "$ZIP_FILE" != *.zip ]]; then
+              continue
+            fi
+            
             echo "Processing ZIP: $ZIP_FILE"
             
             BASENAME=$(basename "$ZIP_FILE" .zip)
@@ -38,7 +49,6 @@ jobs:
             mkdir -p "$WORK_DIR"
             unzip -o "$ZIP_FILE" -d "$WORK_DIR"
             
-            # 查找 .gltf 文件
             GLTF_FILE=$(find "$WORK_DIR" -name "*.gltf" | head -n 1)
             
             if [ -z "$GLTF_FILE" ]; then
@@ -77,15 +87,18 @@ jobs:
           # ============================================
           # 处理单个 .glb 文件
           # ============================================
-          GLB_FILES=$(git diff --name-only HEAD^ HEAD -- '*.glb')
-          
-          for GLB_FILE in $GLB_FILES; do
+          for GLB_FILE in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            # 只处理 .glb 文件
+            if [[ "$GLB_FILE" != *.glb ]]; then
+              continue
+            fi
+            
             echo "Processing GLB: $GLB_FILE"
             
             BASENAME=$(basename "$GLB_FILE" .glb)
             USDZ_FILE="$BASENAME.usdz"
             
-            # GLB → USDZ（一步到位）
+            # GLB → USDZ
             echo "  GLB → USDZ..."
             usdzconvert "$GLB_FILE" "$USDZ_FILE" || {
               echo "  Failed to convert $GLB_FILE"
@@ -94,10 +107,9 @@ jobs:
             
             echo "  Success: $USDZ_FILE"
             
-            # 删除原始 GLB 文件
             rm -f "$GLB_FILE"
           done
-      
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
