@@ -1,21 +1,19 @@
 import bpy
 import os
-import math
+import sys
 from mathutils import Vector
 
 # =========================
-# 1. 输入文件 & 输出文件
+# 1. 读取参数
 # =========================
-input_file = "model.usdz"
+argv = sys.argv
+argv = argv[argv.index("--") + 1:] if "--" in argv else argv
 
-base_name = os.path.splitext(os.path.basename(input_file))[0]
-output_file = os.path.abspath(f"{base_name}.png")
+input_file = argv[0]
+output_file = os.path.abspath(argv[1])
 
 print("INPUT:", input_file)
 print("OUTPUT:", output_file)
-
-if not os.path.exists(input_file):
-    raise SystemExit("❌ USDZ 不存在")
 
 # =========================
 # 2. 清空场景
@@ -25,25 +23,31 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 # =========================
 # 3. 导入 USDZ
 # =========================
-res = bpy.ops.wm.usd_import(filepath=input_file)
-print("IMPORT:", res)
+bpy.ops.wm.usd_import(filepath=input_file)
 
 meshes = [o for o in bpy.data.objects if o.type == 'MESH']
-
 if not meshes:
-    raise RuntimeError("❌ 没有 mesh")
+    raise RuntimeError("❌ no mesh found")
 
 # =========================
-# 4. 计算 bounding box（自动居中）
+# 4. 计算包围盒 + 居中
 # =========================
-min_v = Vector((1e10, 1e10, 1e10))
-max_v = Vector((-1e10, -1e10, -1e10))
+min_v = Vector((1e10,1e10,1e10))
+max_v = Vector((-1e10,-1e10,-1e10))
 
 for obj in meshes:
     for v in obj.bound_box:
-        wv = obj.matrix_world @ Vector(v)
-        min_v = Vector((min(min_v.x, wv.x), min(min_v.y, wv.y), min(min_v.z, wv.z)))
-        max_v = Vector((max(max_v.x, wv.x), max(max_v.y, wv.y), max(max_v.z, wv.z)))
+        w = obj.matrix_world @ Vector(v)
+        min_v = Vector((
+            min(min_v.x, w.x),
+            min(min_v.y, w.y),
+            min(min_v.z, w.z)
+        ))
+        max_v = Vector((
+            max(max_v.x, w.x),
+            max(max_v.y, w.y),
+            max(max_v.z, w.z)
+        ))
 
 center = (min_v + max_v) / 2
 size = (max_v - min_v).length
@@ -51,66 +55,77 @@ size = (max_v - min_v).length
 for obj in meshes:
     obj.location -= center
 
-print("CENTERED OK")
-
 # =========================
-# 5. 相机（45° 侧视 + 商品角度）
-# =========================
-cam_dist = size * 2.2
-
-bpy.ops.object.camera_add(location=(cam_dist * 0.8, -cam_dist, cam_dist * 0.6))
-cam = bpy.context.object
-bpy.context.scene.camera = cam
-
-cam.data.lens = 50  # 商品常用焦距
-cam.data.clip_start = 0.01
-cam.data.clip_end = 10000
-
-# look at origin
-direction = Vector((0, 0, 0)) - cam.location
-cam.rotation_euler = direction.to_track_quat('-Z', 'Y').to_euler()
-
-# =========================
-# 6. 光照（柔和商品光）
-# =========================
-bpy.ops.object.light_add(type='AREA', location=(2, -2, 3))
-key_light = bpy.context.object
-key_light.data.energy = 300
-key_light.data.size = 3
-
-bpy.ops.object.light_add(type='AREA', location=(-2, -1, 2))
-fill_light = bpy.context.object
-fill_light.data.energy = 120
-fill_light.data.size = 5
-
-# =========================
-# 7. 白底环境（电商风格）
-# =========================
-world = bpy.context.scene.world or bpy.data.worlds.new("World")
-bpy.context.scene.world = world
-world.use_nodes = True
-
-bg = world.node_tree.nodes["Background"]
-bg.inputs[0].default_value = (1, 1, 1, 1)
-bg.inputs[1].default_value = 1.2
-
-# =========================
-# 8. 渲染设置（高质量CPU）
+# 5. Eevee（关键：更像产品图）
 # =========================
 scene = bpy.context.scene
-scene.render.engine = 'CYCLES'
-scene.cycles.device = 'CPU'
-scene.cycles.samples = 64
+scene.render.engine = 'BLENDER_EEVEE'
 
 scene.render.resolution_x = 512
 scene.render.resolution_y = 512
 scene.render.resolution_percentage = 100
 
+scene.eevee.use_gtao = True          # 环境光遮蔽
+scene.eevee.use_bloom = True         # 轻微发光
+scene.eevee.use_ssr = True           # 屏幕空间反射
+
+# =========================
+# 6. 相机（商品45°）
+# =========================
+cam_dist = size * 2.2
+
+bpy.ops.object.camera_add(location=(cam_dist, -cam_dist, cam_dist * 0.8))
+cam = bpy.context.object
+scene.camera = cam
+
+direction = Vector((0,0,0)) - cam.location
+cam.rotation_euler = direction.to_track_quat('-Z','Y').to_euler()
+
+cam.data.lens = 55
+cam.data.clip_start = 0.01
+cam.data.clip_end = 10000
+
+# =========================
+# 7. 三点布光（商品摄影标准）
+# =========================
+
+# 主光
+bpy.ops.object.light_add(type='AREA', location=(3, -3, 4))
+key = bpy.context.object
+key.data.energy = 800
+key.data.size = 4
+
+# 辅光
+bpy.ops.object.light_add(type='AREA', location=(-3, 2, 3))
+fill = bpy.context.object
+fill.data.energy = 250
+fill.data.size = 5
+
+# 背光（轮廓）
+bpy.ops.object.light_add(type='AREA', location=(0, 3, 4))
+rim = bpy.context.object
+rim.data.energy = 300
+rim.data.size = 3
+
+# =========================
+# 8. 白底世界（干净电商风）
+# =========================
+world = scene.world or bpy.data.worlds.new("World")
+scene.world = world
+world.use_nodes = True
+
+bg = world.node_tree.nodes["Background"]
+bg.inputs[0].default_value = (1, 1, 1, 1)
+bg.inputs[1].default_value = 1.0
+
+# =========================
+# 9. 渲染设置（Eevee 快速输出）
+# =========================
 scene.render.image_settings.file_format = 'PNG'
 scene.render.filepath = output_file
 
 # =========================
-# 9. 渲染 + 强制保存
+# 10. 渲染
 # =========================
 print("RENDER START")
 
