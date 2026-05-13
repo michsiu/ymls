@@ -1,0 +1,264 @@
+2026-05-13T04:24:32.1702098Z Current runner version: '2.334.0'
+2026-05-13T04:24:32.1727048Z ##[group]Runner Image Provisioner
+2026-05-13T04:24:32.1727943Z Hosted Compute Agent
+2026-05-13T04:24:32.1728563Z Version: 20260213.493
+2026-05-13T04:24:32.1729192Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+2026-05-13T04:24:32.1730132Z Build Date: 2026-02-13T00:28:41Z
+2026-05-13T04:24:32.1730915Z Worker ID: {fb102ef2-40d3-4e1d-9411-3994dfa592a2}
+2026-05-13T04:24:32.1731637Z Azure Region: westcentralus
+2026-05-13T04:24:32.1732229Z ##[endgroup]
+2026-05-13T04:24:32.1733712Z ##[group]Operating System
+2026-05-13T04:24:32.1734275Z Ubuntu
+2026-05-13T04:24:32.1734774Z 24.04.4
+2026-05-13T04:24:32.1735240Z LTS
+2026-05-13T04:24:32.1735739Z ##[endgroup]
+2026-05-13T04:24:32.1736247Z ##[group]Runner Image
+2026-05-13T04:24:32.1736830Z Image: ubuntu-24.04
+2026-05-13T04:24:32.1737376Z Version: 20260413.86.1
+2026-05-13T04:24:32.1738575Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260413.86/images/ubuntu/Ubuntu2404-Readme.md
+2026-05-13T04:24:32.1740237Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260413.86
+2026-05-13T04:24:32.1741166Z ##[endgroup]
+2026-05-13T04:24:32.1742300Z ##[group]GITHUB_TOKEN Permissions
+2026-05-13T04:24:32.1744131Z Contents: read
+2026-05-13T04:24:32.1744624Z Metadata: read
+2026-05-13T04:24:32.1745269Z Packages: read
+2026-05-13T04:24:32.1745780Z ##[endgroup]
+2026-05-13T04:24:32.1747895Z Secret source: Actions
+2026-05-13T04:24:32.1748662Z Prepare workflow directory
+2026-05-13T04:24:32.2131348Z Prepare all required actions
+2026-05-13T04:24:32.2169024Z Getting action download info
+2026-05-13T04:24:32.5961986Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2026-05-13T04:24:32.7304705Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-05-13T04:24:32.9397214Z Complete job name: inspect-uploaded-files
+2026-05-13T04:24:33.0115393Z ##[group]Run actions/checkout@v4
+2026-05-13T04:24:33.0116198Z with:
+2026-05-13T04:24:33.0116563Z   fetch-depth: 2
+2026-05-13T04:24:33.0116972Z   repository: michsiu/ymls
+2026-05-13T04:24:33.0117838Z   token: ***
+2026-05-13T04:24:33.0118229Z   ssh-strict: true
+2026-05-13T04:24:33.0118616Z   ssh-user: git
+2026-05-13T04:24:33.0119000Z   persist-credentials: true
+2026-05-13T04:24:33.0119437Z   clean: true
+2026-05-13T04:24:33.0119977Z   sparse-checkout-cone-mode: true
+2026-05-13T04:24:33.0120447Z   fetch-tags: false
+2026-05-13T04:24:33.0120828Z   show-progress: true
+2026-05-13T04:24:33.0121217Z   lfs: false
+2026-05-13T04:24:33.0121566Z   submodules: false
+2026-05-13T04:24:33.0121969Z   set-safe-directory: true
+2026-05-13T04:24:33.0122654Z ##[endgroup]
+2026-05-13T04:24:33.1248228Z Syncing repository: michsiu/ymls
+2026-05-13T04:24:33.1250201Z ##[group]Getting Git version info
+2026-05-13T04:24:33.1250870Z Working directory is '/home/runner/work/ymls/ymls'
+2026-05-13T04:24:33.1251918Z [command]/usr/bin/git version
+2026-05-13T04:24:33.1293398Z git version 2.53.0
+2026-05-13T04:24:33.1317778Z ##[endgroup]
+2026-05-13T04:24:33.1340515Z Temporarily overriding HOME='/home/runner/work/_temp/acad8473-3f8a-4408-9572-8c039603ef96' before making global git config changes
+2026-05-13T04:24:33.1342854Z Adding repository directory to the temporary git global config as a safe directory
+2026-05-13T04:24:33.1346089Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/ymls/ymls
+2026-05-13T04:24:33.1381358Z Deleting the contents of '/home/runner/work/ymls/ymls'
+2026-05-13T04:24:33.1385244Z ##[group]Initializing the repository
+2026-05-13T04:24:33.1389048Z [command]/usr/bin/git init /home/runner/work/ymls/ymls
+2026-05-13T04:24:33.1466576Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-05-13T04:24:33.1467758Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-05-13T04:24:33.1469127Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-05-13T04:24:33.1470075Z hint: call:
+2026-05-13T04:24:33.1470720Z hint:
+2026-05-13T04:24:33.1471349Z hint: 	git config --global init.defaultBranch <name>
+2026-05-13T04:24:33.1471918Z hint:
+2026-05-13T04:24:33.1472447Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-05-13T04:24:33.1473702Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-05-13T04:24:33.1474557Z hint:
+2026-05-13T04:24:33.1474920Z hint: 	git branch -m <name>
+2026-05-13T04:24:33.1475348Z hint:
+2026-05-13T04:24:33.1475924Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-05-13T04:24:33.1476810Z Initialized empty Git repository in /home/runner/work/ymls/ymls/.git/
+2026-05-13T04:24:33.1478638Z [command]/usr/bin/git remote add origin https://github.com/michsiu/ymls
+2026-05-13T04:24:33.1509697Z ##[endgroup]
+2026-05-13T04:24:33.1510700Z ##[group]Disabling automatic garbage collection
+2026-05-13T04:24:33.1514121Z [command]/usr/bin/git config --local gc.auto 0
+2026-05-13T04:24:33.1543127Z ##[endgroup]
+2026-05-13T04:24:33.1543769Z ##[group]Setting up auth
+2026-05-13T04:24:33.1550155Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-05-13T04:24:33.1581161Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-05-13T04:24:33.1870547Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-05-13T04:24:33.1899717Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-05-13T04:24:33.2148267Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-05-13T04:24:33.2191098Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-05-13T04:24:33.2447369Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-05-13T04:24:33.2485287Z ##[endgroup]
+2026-05-13T04:24:33.2486354Z ##[group]Fetching the repository
+2026-05-13T04:24:33.2494730Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=2 origin +c63fe8d8a3e2f82407ba30e5f059cfedd55e75bb:refs/remotes/origin/main
+2026-05-13T04:24:35.1417534Z From https://github.com/michsiu/ymls
+2026-05-13T04:24:35.1419187Z  * [new ref]         c63fe8d8a3e2f82407ba30e5f059cfedd55e75bb -> origin/main
+2026-05-13T04:24:35.1448728Z ##[endgroup]
+2026-05-13T04:24:35.1450161Z ##[group]Determining the checkout info
+2026-05-13T04:24:35.1452069Z ##[endgroup]
+2026-05-13T04:24:35.1457992Z [command]/usr/bin/git sparse-checkout disable
+2026-05-13T04:24:35.1497543Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-05-13T04:24:35.1524897Z ##[group]Checking out the ref
+2026-05-13T04:24:35.1529272Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2026-05-13T04:24:35.1988001Z Switched to a new branch 'main'
+2026-05-13T04:24:35.1989160Z branch 'main' set up to track 'origin/main'.
+2026-05-13T04:24:35.1996288Z ##[endgroup]
+2026-05-13T04:24:35.2036200Z [command]/usr/bin/git log -1 --format=%H
+2026-05-13T04:24:35.2060603Z c63fe8d8a3e2f82407ba30e5f059cfedd55e75bb
+2026-05-13T04:24:35.2275791Z ##[group]Run echo "==================== 触发信息 ===================="
+2026-05-13T04:24:35.2276696Z [36;1mecho "==================== 触发信息 ===================="[0m
+2026-05-13T04:24:35.2277343Z [36;1mecho "触发事件: push"[0m
+2026-05-13T04:24:35.2277840Z [36;1mecho "触发者: michsiu"[0m
+2026-05-13T04:24:35.2278341Z [36;1mecho "提交信息: 创建requirements.txt"[0m
+2026-05-13T04:24:35.2278887Z [36;1mecho "分支: main"[0m
+2026-05-13T04:24:35.2279496Z [36;1mecho "提交SHA: c63fe8d8a3e2f82407ba30e5f059cfedd55e75bb"[0m
+2026-05-13T04:24:35.2280477Z [36;1mecho "================================================"[0m
+2026-05-13T04:24:35.2308396Z shell: /usr/bin/bash -e {0}
+2026-05-13T04:24:35.2308943Z ##[endgroup]
+2026-05-13T04:24:35.2382178Z ==================== 触发信息 ====================
+2026-05-13T04:24:35.2383233Z 触发事件: push
+2026-05-13T04:24:35.2384251Z 触发者: michsiu
+2026-05-13T04:24:35.2384806Z 提交信息: 创建requirements.txt
+2026-05-13T04:24:35.2385302Z 分支: main
+2026-05-13T04:24:35.2385918Z 提交SHA: c63fe8d8a3e2f82407ba30e5f059cfedd55e75bb
+2026-05-13T04:24:35.2386575Z ================================================
+2026-05-13T04:24:35.2448379Z ##[group]Run echo "==================== 新增/修改的文件 ===================="
+2026-05-13T04:24:35.2449183Z [36;1mecho "==================== 新增/修改的文件 ===================="[0m
+2026-05-13T04:24:35.2450055Z [36;1m[0m
+2026-05-13T04:24:35.2450462Z [36;1m# 获取本次提交与上次提交的差异[0m
+2026-05-13T04:24:35.2451064Z [36;1mgit diff --name-only HEAD~1 HEAD | while read file; do[0m
+2026-05-13T04:24:35.2451804Z [36;1m  echo "----------------------------------------"[0m
+2026-05-13T04:24:35.2452428Z [36;1m  echo "文件路径: $file"[0m
+2026-05-13T04:24:35.2452936Z [36;1m  echo "文件名: $(basename "$file")"[0m
+2026-05-13T04:24:35.2453493Z [36;1m  echo "所在目录: $(dirname "$file")"[0m
+2026-05-13T04:24:35.2454013Z [36;1m  [0m
+2026-05-13T04:24:35.2454406Z [36;1m  if [ -f "$file" ]; then[0m
+2026-05-13T04:24:35.2454956Z [36;1m    echo "文件大小: $(stat -c%s "$file") bytes"[0m
+2026-05-13T04:24:35.2455549Z [36;1m    echo "文件类型: $(file -b "$file")"[0m
+2026-05-13T04:24:35.2456197Z [36;1m    echo "MD5: $(md5sum "$file" | cut -d' ' -f1)"[0m
+2026-05-13T04:24:35.2456810Z [36;1m    echo "权限: $(stat -c%a "$file")"[0m
+2026-05-13T04:24:35.2457337Z [36;1m    [0m
+2026-05-13T04:24:35.2457725Z [36;1m    # 如果是文本文件，显示前几行[0m
+2026-05-13T04:24:35.2458234Z [36;1m    if file "$file" | grep -q text; then[0m
+2026-05-13T04:24:35.2458799Z [36;1m      echo "预览内容:"[0m
+2026-05-13T04:24:35.2459295Z [36;1m      head -n 3 "$file" | sed 's/^/  /'[0m
+2026-05-13T04:24:35.2460007Z [36;1m    fi[0m
+2026-05-13T04:24:35.2460420Z [36;1m  fi[0m
+2026-05-13T04:24:35.2460893Z [36;1m  echo "----------------------------------------"[0m
+2026-05-13T04:24:35.2461461Z [36;1mdone[0m
+2026-05-13T04:24:35.2483545Z shell: /usr/bin/bash -e {0}
+2026-05-13T04:24:35.2484058Z ##[endgroup]
+2026-05-13T04:24:35.2530397Z ==================== 新增/修改的文件 ====================
+2026-05-13T04:24:35.2550419Z ----------------------------------------
+2026-05-13T04:24:35.2551534Z 文件路径: requirements.txt
+2026-05-13T04:24:35.2563199Z 文件名: requirements.txt
+2026-05-13T04:24:35.2577579Z 所在目录: .
+2026-05-13T04:24:35.2591544Z 文件大小: 76 bytes
+2026-05-13T04:24:35.3072393Z 文件类型: ASCII text
+2026-05-13T04:24:35.3099810Z MD5: b624d7b8ecba66ed47ef9a72cf33e7ab
+2026-05-13T04:24:35.3114187Z 权限: 644
+2026-05-13T04:24:35.3169070Z 预览内容:
+2026-05-13T04:24:35.3183440Z   torch>=2.0.0
+2026-05-13T04:24:35.3184176Z   transformers>=4.44.2
+2026-05-13T04:24:35.3184680Z   huggingface_hub>=0.19.0
+2026-05-13T04:24:35.3185535Z ----------------------------------------
+2026-05-13T04:24:35.3243834Z ##[group]Run echo "==================== 当前仓库所有文件 ===================="
+2026-05-13T04:24:35.3244642Z [36;1mecho "==================== 当前仓库所有文件 ===================="[0m
+2026-05-13T04:24:35.3245428Z [36;1mecho "文件总数: $(find . -type f -not -path './.git/*' | wc -l)"[0m
+2026-05-13T04:24:35.3246114Z [36;1mecho ""[0m
+2026-05-13T04:24:35.3246521Z [36;1mecho "文件列表:"[0m
+2026-05-13T04:24:35.3247164Z [36;1mfind . -type f -not -path './.git/*' -o -type l | sort | head -n 20[0m
+2026-05-13T04:24:35.3247892Z [36;1mecho ""[0m
+2026-05-13T04:24:35.3248322Z [36;1mecho "使用 'ls -la' 查看完整列表"[0m
+2026-05-13T04:24:35.3271941Z shell: /usr/bin/bash -e {0}
+2026-05-13T04:24:35.3272447Z ##[endgroup]
+2026-05-13T04:24:35.3316843Z ==================== 当前仓库所有文件 ====================
+2026-05-13T04:24:35.3342180Z 文件总数: 8
+2026-05-13T04:24:35.3342558Z 
+2026-05-13T04:24:35.3342877Z 文件列表:
+2026-05-13T04:24:35.3364422Z ./.github/workflows/fileteiggertest.yml
+2026-05-13T04:24:35.3365353Z ./.github/workflows/github_combiner.yml
+2026-05-13T04:24:35.3366627Z ./.github/workflows/usdz_preview_gen.yml
+2026-05-13T04:24:35.3367568Z ./GitHub_Combine_Task.txt
+2026-05-13T04:24:35.3368557Z ./log.txt
+2026-05-13T04:24:35.3369197Z ./model.usdz
+2026-05-13T04:24:35.3369601Z ./render.py
+2026-05-13T04:24:35.3370329Z ./requirements.txt
+2026-05-13T04:24:35.3370630Z 
+2026-05-13T04:24:35.3370935Z 使用 'ls -la' 查看完整列表
+2026-05-13T04:24:35.3408153Z ##[group]Run echo "==================== 提交详情 ===================="
+2026-05-13T04:24:35.3408949Z [36;1mecho "==================== 提交详情 ===================="[0m
+2026-05-13T04:24:35.3409563Z [36;1mecho "完整提交信息:"[0m
+2026-05-13T04:24:35.3410314Z [36;1mgit log -1 --stat[0m
+2026-05-13T04:24:35.3410775Z [36;1mecho ""[0m
+2026-05-13T04:24:35.3482986Z [36;1mecho "新增文件数: $(git diff --name-only --diff-filter=A HEAD~1 HEAD | wc -l)"[0m
+2026-05-13T04:24:35.3484684Z [36;1mecho "修改文件数: $(git diff --name-only --diff-filter=M HEAD~1 HEAD | wc -l)"[0m
+2026-05-13T04:24:35.3486153Z [36;1mecho "删除文件数: $(git diff --name-only --diff-filter=D HEAD~1 HEAD | wc -l)"[0m
+2026-05-13T04:24:35.3513512Z shell: /usr/bin/bash -e {0}
+2026-05-13T04:24:35.3514048Z ##[endgroup]
+2026-05-13T04:24:35.3561602Z ==================== 提交详情 ====================
+2026-05-13T04:24:35.3562230Z 完整提交信息:
+2026-05-13T04:24:35.3580203Z commit c63fe8d8a3e2f82407ba30e5f059cfedd55e75bb
+2026-05-13T04:24:35.3580910Z Author: Michael Hsiu <xypcx@hotmail.com>
+2026-05-13T04:24:35.3581470Z Date:   Wed May 13 12:24:26 2026 +0800
+2026-05-13T04:24:35.3581837Z 
+2026-05-13T04:24:35.3582092Z     创建requirements.txt
+2026-05-13T04:24:35.3582364Z 
+2026-05-13T04:24:35.3582669Z  requirements.txt | 4 ++++
+2026-05-13T04:24:35.3583317Z  1 file changed, 4 insertions(+)
+2026-05-13T04:24:35.3583664Z 
+2026-05-13T04:24:35.3608149Z 新增文件数: 1
+2026-05-13T04:24:35.3632590Z 修改文件数: 0
+2026-05-13T04:24:35.3656593Z 删除文件数: 0
+2026-05-13T04:24:35.3734423Z ##[group]Run actions/upload-artifact@v4
+2026-05-13T04:24:35.3734981Z with:
+2026-05-13T04:24:35.3735386Z   name: uploaded-files-info
+2026-05-13T04:24:35.3735888Z   path: .git/logs/HEAD
+
+2026-05-13T04:24:35.3736343Z   retention-days: 7
+2026-05-13T04:24:35.3736777Z   if-no-files-found: warn
+2026-05-13T04:24:35.3737232Z   compression-level: 6
+2026-05-13T04:24:35.3737665Z   overwrite: false
+2026-05-13T04:24:35.3738082Z   include-hidden-files: false
+2026-05-13T04:24:35.3738569Z ##[endgroup]
+2026-05-13T04:24:35.5902412Z With the provided path, there will be 1 file uploaded
+2026-05-13T04:24:35.5905422Z Artifact name is valid!
+2026-05-13T04:24:35.5906463Z Root directory input is valid!
+2026-05-13T04:24:35.7965048Z Beginning upload of artifact content to blob storage
+2026-05-13T04:24:36.0434122Z Uploaded bytes 273
+2026-05-13T04:24:36.1079095Z Finished uploading artifact content to blob storage!
+2026-05-13T04:24:36.1083001Z SHA256 digest of uploaded artifact zip is 893c741437a00ab28193cd0e6cd9fabf01cd267fe33d85e0b9a36f8abb3ab36f
+2026-05-13T04:24:36.1085766Z Finalizing artifact upload
+2026-05-13T04:24:36.2338694Z Artifact uploaded-files-info.zip successfully finalized. Artifact ID 6961578310
+2026-05-13T04:24:36.2341913Z Artifact uploaded-files-info has been successfully uploaded! Final size is 273 bytes. Artifact ID is 6961578310
+2026-05-13T04:24:36.2346807Z Artifact download URL: https://github.com/michsiu/ymls/actions/runs/25778178036/artifacts/6961578310
+2026-05-13T04:24:36.2487552Z ##[group]Run echo "## 🚀 Actions已激活！" >> $GITHUB_STEP_SUMMARY
+2026-05-13T04:24:36.2489200Z [36;1mecho "## 🚀 Actions已激活！" >> $GITHUB_STEP_SUMMARY[0m
+2026-05-13T04:24:36.2490795Z [36;1mecho "" >> $GITHUB_STEP_SUMMARY[0m
+2026-05-13T04:24:36.2492066Z [36;1mecho "### 触发信息" >> $GITHUB_STEP_SUMMARY[0m
+2026-05-13T04:24:36.2493466Z [36;1mecho "- **事件类型**: push" >> $GITHUB_STEP_SUMMARY[0m
+2026-05-13T04:24:36.2494946Z [36;1mecho "- **触发者**: michsiu" >> $GITHUB_STEP_SUMMARY[0m
+2026-05-13T04:24:36.2497013Z [36;1mecho "- **提交SHA**: \`c63fe8d8a3e2f82407ba30e5f059cfedd55e75bb\`" >> $GITHUB_STEP_SUMMARY[0m
+2026-05-13T04:24:36.2498942Z [36;1mecho "" >> $GITHUB_STEP_SUMMARY[0m
+2026-05-13T04:24:36.2500634Z [36;1m[0m
+2026-05-13T04:24:36.2501556Z [36;1mecho "### 变更文件" >> $GITHUB_STEP_SUMMARY[0m
+2026-05-13T04:24:36.2503118Z [36;1mgit diff --name-only HEAD~1 HEAD | while read file; do[0m
+2026-05-13T04:24:36.2504696Z [36;1m  echo "- \`$file\`" >> $GITHUB_STEP_SUMMARY[0m
+2026-05-13T04:24:36.2506012Z [36;1mdone[0m
+2026-05-13T04:24:36.2506911Z [36;1mecho "" >> $GITHUB_STEP_SUMMARY[0m
+2026-05-13T04:24:36.2508253Z [36;1mecho "✅ Actions执行完成！" >> $GITHUB_STEP_SUMMARY[0m
+2026-05-13T04:24:36.2532952Z shell: /usr/bin/bash -e {0}
+2026-05-13T04:24:36.2533997Z ##[endgroup]
+2026-05-13T04:24:36.2829621Z Post job cleanup.
+2026-05-13T04:24:36.3818977Z [command]/usr/bin/git version
+2026-05-13T04:24:36.3856329Z git version 2.53.0
+2026-05-13T04:24:36.3898940Z Temporarily overriding HOME='/home/runner/work/_temp/601cdc4b-fc43-4c04-81d3-34f33d751bf8' before making global git config changes
+2026-05-13T04:24:36.3902192Z Adding repository directory to the temporary git global config as a safe directory
+2026-05-13T04:24:36.3912018Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/ymls/ymls
+2026-05-13T04:24:36.3948168Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-05-13T04:24:36.3982217Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-05-13T04:24:36.4232459Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-05-13T04:24:36.4255081Z http.https://github.com/.extraheader
+2026-05-13T04:24:36.4270175Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-05-13T04:24:36.4307302Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-05-13T04:24:36.4559081Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-05-13T04:24:36.4594336Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-05-13T04:24:36.4983302Z Cleaning up orphan processes
+2026-05-13T04:24:36.5430503Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/upload-artifact@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
