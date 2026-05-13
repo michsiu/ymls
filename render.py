@@ -1,11 +1,10 @@
 import bpy
 import os
 import sys
-import math
 from mathutils import Vector
 
 # =========================
-# [[IMPORTANT]] IO
+# [[IMPORTANT]] 输入输出
 # =========================
 argv = sys.argv
 argv = argv[argv.index("--") + 1:] if "--" in argv else []
@@ -17,12 +16,12 @@ print("[[IMPORTANT]] INPUT:", input_file)
 print("[[IMPORTANT]] OUTPUT:", output_file)
 
 # =========================
-# clean scene
+# 清空场景
 # =========================
 bpy.ops.wm.read_factory_settings(use_empty=True)
 
 # =========================
-# import USDZ
+# 导入 USDZ
 # =========================
 bpy.ops.wm.usd_import(filepath=input_file)
 
@@ -32,135 +31,123 @@ meshes = [o for o in objects if o.type == 'MESH']
 print("[[IMPORTANT]] OBJECT COUNT:", len(objects))
 print("[[IMPORTANT]] MESH COUNT:", len(meshes))
 
-if not meshes:
-    raise RuntimeError("NO MESH FOUND")
+# =========================
+# 🚨 强制兜底：没有 mesh 直接报错
+# =========================
+if len(meshes) == 0:
+    raise RuntimeError("[[IMPORTANT]] NO MESH FOUND - USDZ IMPORT FAILED")
 
 # =========================
-# bbox compute
+# 包围盒计算
 # =========================
-min_v = Vector((1e10,1e10,1e10))
-max_v = Vector((-1e10,-1e10,-1e10))
+min_v = Vector((1e10, 1e10, 1e10))
+max_v = Vector((-1e10, -1e10, -1e10))
 
 for obj in meshes:
     for v in obj.bound_box:
         w = obj.matrix_world @ Vector(v)
-        min_v = Vector((min(min_v.x,w.x), min(min_v.y,w.y), min(min_v.z,w.z)))
-        max_v = Vector((max(max_v.x,w.x), max(max_v.y,w.y), max(max_v.z,w.z)))
+        min_v = Vector((
+            min(min_v.x, w.x),
+            min(min_v.y, w.y),
+            min(min_v.z, w.z)
+        ))
+        max_v = Vector((
+            max(max_v.x, w.x),
+            max(max_v.y, w.y),
+            max(max_v.z, w.z)
+        ))
 
 center = (min_v + max_v) / 2
 size = (max_v - min_v).length
 
 print("[[IMPORTANT]] MODEL SIZE:", size)
 
+# =========================
+# 居中模型
+# =========================
 for obj in meshes:
     obj.location -= center
 
-scale = 2.0 / (size if size > 0 else 1)
+bpy.context.view_layer.update()
+
+# =========================
+# 🚨 强制归一化（防飞出画面）
+# =========================
+target = 2.0
+scale = target / (size if size > 0 else 1)
+
 for obj in meshes:
     obj.scale *= scale
 
 bpy.context.view_layer.update()
 
-# =========================
-# lights (stable studio)
-# =========================
-for o in list(bpy.data.objects):
-    if o.type == 'LIGHT':
-        bpy.data.objects.remove(o)
-
-def add_light(loc, energy):
-    bpy.ops.object.light_add(type='AREA', location=loc)
-    l = bpy.context.object
-    l.data.energy = energy
-    return l
-
-add_light((4,-4,5),1500)
-add_light((-4,3,3),600)
-add_light((0,5,4),400)
+print("[[IMPORTANT]] SCALE:", scale)
 
 # =========================
-# CAMERA VALIDATION CORE
+# 🔥 强制可见性修复（防白图关键）
 # =========================
-
-def create_camera(angle_deg):
-    rad = math.radians(angle_deg)
-
-    cam_loc = Vector((
-        6 * math.cos(rad),
-        -6 * math.sin(rad),
-        3
-    ))
-
-    bpy.ops.object.camera_add(location=cam_loc)
-    cam = bpy.context.object
-
-    direction = Vector((0,0,0)) - cam.location
-    cam.rotation_euler = direction.to_track_quat('-Z','Y').to_euler()
-
-    bpy.context.scene.camera = cam
-    return cam
-
-def check_visibility(cam):
-    scene = bpy.context.scene
-    bpy.context.view_layer.update()
-
-    # 简单投影检测：bbox中心是否在camera前方
-    cam_loc = cam.location
-
-    for m in meshes:
-        world_pos = m.matrix_world.translation
-        vec = world_pos - cam_loc
-
-        # dot product approx forward check
-        forward = Vector((0,0,0)) - cam_loc
-        if vec.dot(forward) < 0:
-            return False
-
-    return True
+for obj in objects:
+    obj.hide_set(False)
+    obj.hide_viewport = False
+    if hasattr(obj, "hide_render"):
+        obj.hide_render = False
 
 # =========================
-# AUTO CAMERA SEARCH (WHITE-FREE SYSTEM)
-# =========================
-angles = [15, 25, 35, 45, 60]
-
-cam = None
-
-for a in angles:
-    cam = create_camera(a)
-
-    ok = check_visibility(cam)
-
-    print("[[IMPORTANT]] ANGLE", a, "VISIBLE:", ok)
-
-    if ok:
-        print("[[IMPORTANT]] SELECTED ANGLE:", a)
-        break
-
-# fallback
-if cam is None:
-    cam = create_camera(25)
-
-# =========================
-# render settings
+# 渲染引擎（稳定优先）
 # =========================
 scene = bpy.context.scene
 scene.render.engine = 'CYCLES'
-scene.cycles.samples = 256
+scene.cycles.samples = 64
 
-scene.render.resolution_x = 1024
-scene.render.resolution_y = 1024
+scene.render.resolution_x = 512
+scene.render.resolution_y = 512
 
-# white bg
+# =========================
+# 世界（避免纯白吞模型）
+# =========================
 world = scene.world or bpy.data.worlds.new("World")
 scene.world = world
 world.use_nodes = True
 
 bg = world.node_tree.nodes["Background"]
-bg.inputs[0].default_value = (0.95,0.95,0.95,1)
+bg.inputs[0].default_value = (0.9, 0.9, 0.9, 1)
 bg.inputs[1].default_value = 1.0
 
 # =========================
-# render
+# 灯光（强制可见）
+# =========================
+bpy.ops.object.light_add(type='AREA', location=(5, -5, 5))
+key = bpy.context.object
+key.data.energy = 1200
+
+bpy.ops.object.light_add(type='AREA', location=(-5, 3, 4))
+fill = bpy.context.object
+fill.data.energy = 400
+
+bpy.ops.object.light_add(type='AREA', location=(0, 5, 5))
+rim = bpy.context.object
+rim.data.energy = 300
+
+# =========================
+# 🚨 强制相机（防白图核心）
+# =========================
+bpy.ops.object.camera_add(location=(6, -6, 4))
+cam = bpy.context.object
+scene.camera = cam
+
+direction = Vector((0, 0, 0)) - cam.location
+cam.rotation_euler = direction.to_track_quat('-Z', 'Y').to_euler()
+
+cam.data.lens = 55
+
+# =========================
+# 🚨 强制“看向物体”（最终防白图）
+# =========================
+bpy.ops.object.select_all(action='SELECT')
+bpy.ops.view3d.camera_to_view_selected()
+
+# =========================
+# 输出
 # =========================
 scene.render.image_settings.file_format = 'PNG'
 scene.render.filepath = output_file
