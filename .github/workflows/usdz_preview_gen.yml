@@ -1,55 +1,77 @@
-name: USDZ Render
+name: Render USDZ Preview
 
 on:
   workflow_dispatch:
 
 jobs:
   render:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
+      # =========================
+      # 1. 拉代码
+      # =========================
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install deps
+      # =========================
+      # 2. 安装系统依赖（关键：修 libEGL）
+      # =========================
+      - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y xvfb wget tar xz-utils
+          sudo apt install -y \
+            wget \
+            xvfb \
+            libegl1 \
+            libegl1-mesa \
+            libgl1 \
+            libgl1-mesa-dri \
+            mesa-utils
 
+      # =========================
+      # 3. 下载 Blender
+      # =========================
       - name: Download Blender
         run: |
           wget https://download.blender.org/release/Blender4.0/blender-4.0.2-linux-x64.tar.xz
           tar -xf blender-4.0.2-linux-x64.tar.xz
+          mv blender-4.0.2-linux-x64 blender
 
-      - name: Run render
+      # =========================
+      # 4. 检查输入文件（你的 USDZ 在根目录）
+      # =========================
+      - name: Check input
         run: |
-          MODEL=$(ls *.usdz | head -n 1)
+          ls -al
+          test -f model.usdz
 
-          if [ -z "$MODEL" ]; then
-            echo "❌ no usd file"
-            exit 1
-          fi
+      # =========================
+      # 5. 渲染（强制软件 OpenGL）
+      # =========================
+      - name: Render USDZ
+        run: |
+          export LIBGL_ALWAYS_SOFTWARE=1
 
-          BASENAME=$(basename "$MODEL" .usdz)
-          OUTPUT="${BASENAME}.png"
-
-          echo "MODEL=$MODEL"
-          echo "OUTPUT=$OUTPUT"
-
-          xvfb-run -a ./blender-4.0.2-linux-x64/blender \
+          xvfb-run -a ./blender/blender \
             -b \
+            --factory-startup \
             --python render.py \
-            -- "$MODEL" "$OUTPUT"
+            -- model.usdz output.png
 
-      - name: Verify
+      # =========================
+      # 6. 验证输出
+      # =========================
+      - name: Verify output
         run: |
-          MODEL=$(ls *.usdz | head -n 1)
-          BASENAME=$(basename "$MODEL" .usdz)
+          ls -al
+          test -f output.png || (echo "❌ output missing" && exit 1)
 
-          test -f "${BASENAME}.png" || (echo "❌ missing output" && exit 1)
-
-      - name: Upload
+      # =========================
+      # 7. 上传结果
+      # =========================
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: preview
-          path: "*.png"
+          path: output.png
