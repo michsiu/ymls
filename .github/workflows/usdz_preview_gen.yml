@@ -1,4 +1,4 @@
-name: Render USDZ Preview
+name: Render USDZ Preview (Stable 24.04)
 
 on:
   workflow_dispatch:
@@ -11,21 +11,22 @@ jobs:
       # =========================
       # 1. 拉代码
       # =========================
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
 
       # =========================
-      # 2. 安装系统依赖（关键：修 libEGL）
+      # 2. 安装系统依赖（Ubuntu 24.04 修复版）
       # =========================
-      - name: Install dependencies
+      - name: Install dependencies (fix EGL + GL)
         run: |
           sudo apt update
           sudo apt install -y \
             wget \
             xvfb \
             libegl1 \
-            libegl1-mesa \
             libgl1 \
+            libglx-mesa0 \
+            libgbm1 \
             libgl1-mesa-dri \
             mesa-utils
 
@@ -39,20 +40,25 @@ jobs:
           mv blender-4.0.2-linux-x64 blender
 
       # =========================
-      # 4. 检查输入文件（你的 USDZ 在根目录）
+      # 4. 检查 USDZ 是否存在
       # =========================
-      - name: Check input
+      - name: Check input file
         run: |
           ls -al
-          test -f model.usdz
+          test -f model.usdz || (echo "❌ model.usdz not found" && exit 1)
 
       # =========================
-      # 5. 渲染（强制软件 OpenGL）
+      # 5. 强制 software OpenGL（避免 EGL 崩）
+      # =========================
+      - name: Set GL fallback
+        run: |
+          echo "LIBGL_ALWAYS_SOFTWARE=1" >> $GITHUB_ENV
+
+      # =========================
+      # 6. 渲染
       # =========================
       - name: Render USDZ
         run: |
-          export LIBGL_ALWAYS_SOFTWARE=1
-
           xvfb-run -a ./blender/blender \
             -b \
             --factory-startup \
@@ -60,15 +66,15 @@ jobs:
             -- model.usdz output.png
 
       # =========================
-      # 6. 验证输出
+      # 7. 验证输出
       # =========================
       - name: Verify output
         run: |
           ls -al
-          test -f output.png || (echo "❌ output missing" && exit 1)
+          test -f output.png || (echo "❌ output.png missing" && exit 1)
 
       # =========================
-      # 7. 上传结果
+      # 8. 上传结果
       # =========================
       - name: Upload artifact
         uses: actions/upload-artifact@v4
