@@ -1,0 +1,55 @@
+name: USDZ Render
+
+on:
+  workflow_dispatch:
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install deps
+        run: |
+          sudo apt update
+          sudo apt install -y xvfb wget tar xz-utils
+
+      - name: Download Blender
+        run: |
+          wget https://download.blender.org/release/Blender4.0/blender-4.0.2-linux-x64.tar.xz
+          tar -xf blender-4.0.2-linux-x64.tar.xz
+
+      - name: Run render
+        run: |
+          MODEL=$(ls *.usdz | head -n 1)
+
+          if [ -z "$MODEL" ]; then
+            echo "❌ no usd file"
+            exit 1
+          fi
+
+          BASENAME=$(basename "$MODEL" .usdz)
+          OUTPUT="${BASENAME}.png"
+
+          echo "MODEL=$MODEL"
+          echo "OUTPUT=$OUTPUT"
+
+          xvfb-run -a ./blender-4.0.2-linux-x64/blender \
+            -b \
+            --python render.py \
+            -- "$MODEL" "$OUTPUT"
+
+      - name: Verify
+        run: |
+          MODEL=$(ls *.usdz | head -n 1)
+          BASENAME=$(basename "$MODEL" .usdz)
+
+          test -f "${BASENAME}.png" || (echo "❌ missing output" && exit 1)
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview
+          path: "*.png"
